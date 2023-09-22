@@ -27,7 +27,12 @@ function(generate_config_run_script)
         message(FATAL_ERROR "${CMAKE_CURRENT_FUNCTION}: config file '${CONFIG_FILE}' does not exist")
     endif()
 
-    set(LOGGING_CONFIG_FILE "${EVEREST_CONFIG_ASSET_DIR}/logging.ini")
+    if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set(LOGGING_CONFIG_FILE "${EVEREST_CONFIG_ASSET_DIR}/debug_logging.ini")
+    else()
+        set(LOGGING_CONFIG_FILE "${EVEREST_CONFIG_ASSET_DIR}/default_logging.ini")
+    endif()
+
     if (OPTNS_LOGGING_CONFIG)
         set(LOGGING_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${OPTNS_LOGGING_CONFIG}.ini")
     endif()
