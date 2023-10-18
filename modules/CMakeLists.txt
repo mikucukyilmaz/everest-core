@@ -32,6 +32,8 @@ ev_add_module(DummyTokenValidator)
 ev_add_module(DummyTokenProvider)
 ev_add_module(DummyTokenProviderManual)
 
+add_subdirectory(Iso15118)
+
 add_subdirectory(examples)
 add_subdirectory(simulation)
 
