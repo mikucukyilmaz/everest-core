@@ -2,8 +2,11 @@
 // Copyright 2020 - 2022 Pionix GmbH and Contributors to EVerest
 #include "OCPP.hpp"
 #include "generated/types/ocpp.hpp"
+#include <cstddef>
 #include <fmt/core.h>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 #include <boost/process.hpp>
 #include <conversions.hpp>
@@ -18,7 +21,8 @@ const std::string CHARGE_X_MREC_VENDOR_ID = "https://chargex.inl.gov";
 
 namespace fs = std::filesystem;
 
-static ErrorInfo get_error_info(const std::optional<types::evse_manager::Error> error) {
+namespace {
+ErrorInfo get_error_info(const std::optional<types::evse_manager::Error>& error) {
 
     if (!error.has_value()) {
         return {ocpp::v16::ChargePointErrorCode::InternalError};
@@ -80,9 +84,54 @@ static ErrorInfo get_error_info(const std::optional<types::evse_manager::Error> 
     case types::evse_manager::ErrorEnum::PermanentFault:
     case types::evse_manager::ErrorEnum::PowermeterTransactionStartFailed:
         return {ocpp::v16::ChargePointErrorCode::InternalError, types::evse_manager::error_enum_to_string(error_code)};
+    case types::evse_manager::ErrorEnum::ErrorLast:
+    default:
+        break;
     }
 
     return {ocpp::v16::ChargePointErrorCode::InternalError};
+}
+} // namespace
+
+static_assert(static_cast<size_t>(types::evse_manager::ErrorEnum::ErrorLast) <= 64, "too many values for bit flags");
+
+void OCPP::clear_all_errors() {
+    active_errors.store(0UL);
+}
+
+void OCPP::clear_error(const std::optional<types::evse_manager::Error>& error) {
+    if (error.has_value()) {
+        const auto flag = static_cast<std::uint64_t>(1U) << static_cast<std::uint64_t>(error.value().error_code);
+        active_errors &= ~flag;
+    }
+}
+
+void OCPP::flag_error(const std::optional<types::evse_manager::Error>& error) {
+    if (error.has_value()) {
+        const auto flag = static_cast<std::uint64_t>(1U) << static_cast<std::uint64_t>(error.value().error_code);
+        active_errors |= flag;
+    }
+}
+
+ErrorInfo OCPP::get_extended_error_info(const std::optional<types::evse_manager::Error>& error) {
+    auto info = get_error_info(error);
+    // update vendor_error_code to include active errors bitmap
+    // [xxxxxxxxxxxxxxxx] OriginalValue
+    // ensure result fits in CiString50Type
+
+    constexpr std::size_t max_size = 50;
+    std::ostringstream vendor_error_code;
+    vendor_error_code << '[' << std::hex << std::setfill('0') << std::setw(16) << active_errors.load() << ']';
+
+    if (info.vendor_error_code.has_value()) {
+        vendor_error_code << ' ' << info.vendor_error_code.value();
+    }
+    std::string vec = vendor_error_code.str();
+    if (vec.size() > max_size) {
+        vec.resize(max_size);
+    }
+    info.vendor_error_code = vec;
+    return info;
 }
 
 void create_empty_user_config(const fs::path& user_config_path) {
@@ -239,13 +288,18 @@ void OCPP::process_session_event(int32_t evse_id, const types::evse_manager::Ses
     } else if (session_event.event == types::evse_manager::SessionEventEnum::Error) {
         EVLOG_debug << "Connector#" << ocpp_connector_id << ": "
                     << "Received Error";
-        const auto error_info = get_error_info(session_event.error);
+        flag_error(session_event.error);
+        const auto error_info = get_extended_error_info(session_event.error);
         this->charge_point->on_error(ocpp_connector_id, error_info.ocpp_error_code, error_info.info,
                                      error_info.vendor_id, error_info.vendor_error_code);
+    } else if (session_event.event == types::evse_manager::SessionEventEnum::ErrorCleared) {
+        clear_error(session_event.error);
     } else if (session_event.event == types::evse_manager::SessionEventEnum::AllErrorsCleared) {
+        clear_all_errors();
         this->charge_point->on_fault(ocpp_connector_id, ocpp::v16::ChargePointErrorCode::NoError);
     } else if (session_event.event == types::evse_manager::SessionEventEnum::PermanentFault) {
-        const auto error_info = get_error_info(session_event.error);
+        flag_error(session_event.error);
+        const auto error_info = get_extended_error_info(session_event.error);
         this->charge_point->on_fault(ocpp_connector_id, error_info.ocpp_error_code, error_info.info,
                                      error_info.vendor_id, error_info.vendor_error_code);
     } else if (session_event.event == types::evse_manager::SessionEventEnum::ReservationStart) {

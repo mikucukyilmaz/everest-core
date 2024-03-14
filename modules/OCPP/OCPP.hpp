@@ -11,6 +11,7 @@
 #include "ld-ev.hpp"
 
 // headers for provided interface implementations
+#include <atomic>
 #include <generated/interfaces/auth_token_provider/Implementation.hpp>
 #include <generated/interfaces/auth_token_validator/Implementation.hpp>
 #include <generated/interfaces/ocpp/Implementation.hpp>
@@ -43,6 +44,13 @@
 #include <ocpp/v201/ocpp_types.hpp>
 
 using EvseConnectorMap = std::map<int32_t, std::map<int32_t, int32_t>>;
+/// \brief Contains information about an error
+struct ErrorInfo {
+    ocpp::v16::ChargePointErrorCode ocpp_error_code;
+    std::optional<std::string> info;
+    std::optional<std::string> vendor_id;
+    std::optional<std::string> vendor_error_code;
+};
 // ev@4bf81b14-a215-475c-a1d3-0a484ae48918:v1
 
 namespace module {
@@ -134,7 +142,7 @@ private:
     void init_evse_ready_map();
     EvseConnectorMap evse_connector_map; // provides access to OCPP connector id by using EVerests evse and connector id
     std::map<int32_t, int32_t>
-        connector_evse_index_map;        // provides access to r_evse_manager index by using OCPP connector id
+        connector_evse_index_map; // provides access to r_evse_manager index by using OCPP connector id
     std::map<int32_t, bool> evse_ready_map;
     std::mutex evse_ready_mutex;
     std::condition_variable evse_ready_cv;
@@ -144,18 +152,17 @@ private:
     std::mutex session_event_mutex;
     std::map<int32_t, std::queue<types::evse_manager::SessionEvent>> session_event_queue;
     void process_session_event(int32_t evse_id, const types::evse_manager::SessionEvent& session_event);
+
+    std::atomic_uint64_t active_errors = 0;
+    void clear_all_errors();
+    void clear_error(const std::optional<types::evse_manager::Error>& error);
+    void flag_error(const std::optional<types::evse_manager::Error>& error);
+    ErrorInfo get_extended_error_info(const std::optional<types::evse_manager::Error>& error);
     // ev@211cfdbe-f69a-4cd6-a4ec-f8aaa3d1b6c8:v1
 };
 
 // ev@087e516b-124c-48df-94fb-109508c7cda9:v1
 // insert other definitions here
-/// \brief Contains information about an error
-struct ErrorInfo {
-    ocpp::v16::ChargePointErrorCode ocpp_error_code;
-    std::optional<std::string> info;
-    std::optional<std::string> vendor_id;
-    std::optional<std::string> vendor_error_code;
-};
 // ev@087e516b-124c-48df-94fb-109508c7cda9:v1
 
 } // namespace module

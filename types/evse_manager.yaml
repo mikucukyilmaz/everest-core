@@ -266,6 +266,7 @@ types:
       - EnergyManagement
       - PermanentFault
       - PowermeterTransactionStartFailed
+      - ErrorLast
   Error:
     description: >-
       Error object that contains information about the error and optional vendor error information
@@ -308,7 +309,7 @@ types:
         type: string
       connector_id:
         description: >-
-          Id of the connector of this EVSE. 
+          Id of the connector of this EVSE.
           If the connector_id is not specified, its assumed to be 1
         type: integer
       event:
@@ -324,7 +325,7 @@ types:
       session_finished:
         description: data for the SessionFinished event
         type: object
-        $ref: /evse_manager#/SessionFinished  
+        $ref: /evse_manager#/SessionFinished
       transaction_started:
         description: data for TransactionStarted event
         type: object
