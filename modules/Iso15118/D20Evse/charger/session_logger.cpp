@@ -82,10 +82,10 @@ private:
         }
 
         const auto offset_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timestamp - last_timestamp);
-        file << "  timestamp_offset: " <<  offset_ms.count() << "\n";
+        file << "  timestamp_offset: " << offset_ms.count() << "\n";
 
         const auto dp = date::floor<date::days>(timestamp);
-        const auto time = date::make_time(timestamp-dp);
+        const auto time = date::make_time(timestamp - dp);
         const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time.subseconds());
         file << "  timestamp: \"";
         file << std::setfill('0') << std::setw(2) << time.hours().count() << ":";
@@ -113,7 +113,7 @@ private:
     }
 
     iso15118::session::logging::TimePoint last_timestamp;
-    bool timestamp_initialized {false};
+    bool timestamp_initialized{false};
 };
 
 SessionLogger::SessionLogger(std::filesystem::path output_dir_) : output_dir(std::filesystem::absolute(output_dir_)) {
