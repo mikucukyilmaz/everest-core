@@ -82,7 +82,7 @@ void evse_managerImpl::init() {
                             }
                             types::evse_manager::StopTransactionRequest request;
                             request.reason = types::evse_manager::StopTransactionReason::Other;
-                            mod->charger->cancelTransaction(request);
+                            mod->charger->cancel_transaction(request);
                         });
 
     mod->mqtt.subscribe(fmt::format("everest_external/nodered/{}/cmd/evse_utility_int", mod->config.connector_id),
@@ -93,7 +93,7 @@ void evse_managerImpl::init() {
                             }
                             types::evse_manager::StopTransactionRequest request;
                             request.reason = types::evse_manager::StopTransactionReason::Other;
-                            mod->charger->cancelTransaction(request);
+                            mod->charger->cancel_transaction(request);
                         });
 
     // /Interface to Node-RED debug UI
