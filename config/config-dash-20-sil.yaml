@@ -54,20 +54,20 @@ active_modules:
   slac:
     module: JsSlacSimulator
   imd:
-    module: JsIMDSimulator
-  car_simulator:
-    module: JsCarSimulator
+    module: IMDSimulator
+  ev_manager:
+    module: JsEvManager
     config_module:
       connector_id: 1
       auto_enable: true
       auto_exec: true
-      auto_exec_commands: sleep 3;iso_wait_slac_matched;iso_start_v2g_session ExternalPayment,DC_extended;iso_wait_pwr_ready;iso_wait_for_stop 15;iso_wait_v2g_session_stopped;unplug;
+      auto_exec_commands: sleep 3;iso_wait_slac_matched;iso_start_v2g_session DC_extended;iso_wait_pwr_ready;iso_wait_for_stop 15;iso_wait_v2g_session_stopped;unplug;
       dc_target_current: 20
       dc_target_voltage: 400
     connections:
-      simulation_control:
+      ev_board_support:
         - module_id: yeti_driver
-          implementation_id: yeti_simulation_control
+          implementation_id: ev_board_support
       ev:
         - module_id: iso15118_car
           implementation_id: ev
