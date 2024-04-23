@@ -10,6 +10,10 @@
 
 #include "Charger.hpp"
 
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <generated/types/powermeter.hpp>
 #include <math.h>
 #include <string.h>
 #include <thread>
@@ -20,11 +24,20 @@
 #include "everest/logging.hpp"
 #include "scoped_lock_timeout.hpp"
 
+std::string generate_session_uuid() {
+    return boost::uuids::to_string(boost::uuids::random_generator()());
+}
+
 namespace module {
 
 Charger::Charger(const std::unique_ptr<IECStateMachine>& bsp, const std::unique_ptr<ErrorHandling>& error_handling,
-                 const types::evse_board_support::Connector_type& connector_type) :
-    bsp(bsp), error_handling(error_handling), connector_type(connector_type) {
+                 const std::vector<std::unique_ptr<powermeterIntf>>& r_powermeter_billing,
+                 const types::evse_board_support::Connector_type& connector_type, const std::string& evse_id) :
+    bsp(bsp),
+    error_handling(error_handling),
+    r_powermeter_billing(r_powermeter_billing),
+    connector_type(connector_type),
+    evse_id(evse_id) {
 
 #ifdef EVEREST_USE_BACKTRACES
     Everest::install_backtrace_handler();
@@ -296,7 +309,8 @@ void Charger::run_state_machine() {
 
                 // If we are restarting, the transaction may already be active
                 if (not shared_context.transaction_active) {
-                    start_transaction();
+                    if (!start_transaction())
+                        break;
                 }
 
                 const EvseState target_state(EvseState::PrepareCharging);
@@ -377,7 +391,8 @@ void Charger::run_state_machine() {
                 }
             } else if (shared_context.authorized and shared_context.authorized_pnc) {
 
-                start_transaction();
+                if (!start_transaction())
+                    break;
 
                 const EvseState target_state(EvseState::PrepareCharging);
 
@@ -1013,13 +1028,27 @@ bool Charger::cancel_transaction(const types::evse_manager::StopTransactionReque
             signal_hlc_stop_charging();
         } else {
             shared_context.current_state = EvseState::ChargingPausedEVSE;
+            pwm_off();
         }
 
         shared_context.transaction_active = false;
         shared_context.last_stop_transaction_reason = request.reason;
-        if (request.id_tag) {
-            shared_context.stop_transaction_id_token = request.id_tag.value();
+        shared_context.stop_transaction_id_token = request.id_tag;
+
+        for (const auto& meter : r_powermeter_billing) {
+            const auto response = meter->call_stop_transaction(shared_context.session_uuid);
+            // If we fail to stop the transaction, we ignore since there is no
+            // path to recovery. Its also not clear what to do
+            if (response.status == types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR) {
+                EVLOG_error << "Failed to stop a transaction on the power meter " << response.error.value_or("");
+                break;
+            } else if (response.status == types::powermeter::TransactionRequestStatus::OK) {
+                shared_context.start_signed_meter_value = response.start_signed_meter_value;
+                shared_context.stop_signed_meter_value = response.signed_meter_value;
+                break;
+            }
         }
+
         signal_simple_event(types::evse_manager::SessionEventEnum::ChargingFinished);
         signal_transaction_finished_event(shared_context.last_stop_transaction_reason,
                                           shared_context.stop_transaction_id_token);
@@ -1031,32 +1060,84 @@ bool Charger::cancel_transaction(const types::evse_manager::StopTransactionReque
 void Charger::start_session(bool authfirst) {
     shared_context.session_active = true;
     shared_context.authorized = false;
+    shared_context.session_uuid = generate_session_uuid();
+    std::optional<types::authorization::ProvidedIdToken> provided_id_token;
     if (authfirst) {
         shared_context.last_start_session_reason = types::evse_manager::StartSessionReason::Authorized;
+        provided_id_token = shared_context.id_token;
     } else {
         shared_context.last_start_session_reason = types::evse_manager::StartSessionReason::EVConnected;
     }
-    signal_session_started_event(shared_context.last_start_session_reason);
+    signal_session_started_event(shared_context.last_start_session_reason, provided_id_token);
 }
 
 void Charger::stop_session() {
     shared_context.session_active = false;
     shared_context.authorized = false;
     signal_simple_event(types::evse_manager::SessionEventEnum::SessionFinished);
+    shared_context.session_uuid.clear();
 }
 
-void Charger::start_transaction() {
+bool Charger::start_transaction() {
     shared_context.stop_transaction_id_token.reset();
     shared_context.transaction_active = true;
+
+    const types::powermeter::TransactionReq req{
+        evse_id, shared_context.session_uuid, shared_context.id_token.id_token.value, 0, 0, ""};
+    for (const auto& meter : r_powermeter_billing) {
+        const auto response = meter->call_start_transaction(req);
+        // If we want to start the session but the meter fail, we stop the charging since
+        // we can't bill the customer.
+        if (response.status == types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR) {
+            EVLOG_error << "Failed to start a transaction on the power meter " << response.error.value_or("");
+            error_handling->raise_powermeter_transaction_start_failed_error(
+                "Failed to start transaction on the power meter");
+            return false;
+        }
+    }
+
     signal_transaction_started_event(shared_context.id_token);
+    return true;
 }
 
 void Charger::stop_transaction() {
     shared_context.transaction_active = false;
     shared_context.last_stop_transaction_reason = types::evse_manager::StopTransactionReason::EVDisconnected;
+
+    for (const auto& meter : r_powermeter_billing) {
+        const auto response = meter->call_stop_transaction(shared_context.session_uuid);
+        // If we fail to stop the transaction, we ignore since there is no
+        // path to recovery. Its also not clear what to do
+        if (response.status == types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR) {
+            EVLOG_error << "Failed to stop a transaction on the power meter " << response.error.value_or("");
+            break;
+        } else if (response.status == types::powermeter::TransactionRequestStatus::OK) {
+            shared_context.start_signed_meter_value = response.start_signed_meter_value;
+            shared_context.stop_signed_meter_value = response.signed_meter_value;
+            break;
+        }
+    }
+
     signal_simple_event(types::evse_manager::SessionEventEnum::ChargingFinished);
     signal_transaction_finished_event(shared_context.last_stop_transaction_reason,
                                       shared_context.stop_transaction_id_token);
+}
+
+std::optional<types::units_signed::SignedMeterValue>
+Charger::take_signed_meter_data(std::optional<types::units_signed::SignedMeterValue>& in) {
+    std::optional<types::units_signed::SignedMeterValue> out;
+    std::swap(out, in);
+    return out;
+}
+
+std::optional<types::units_signed::SignedMeterValue> Charger::get_stop_signed_meter_value() {
+    // This is used only inside of the state machine, so we do not need to lock here.
+    return take_signed_meter_data(shared_context.stop_signed_meter_value);
+}
+
+std::optional<types::units_signed::SignedMeterValue> Charger::get_start_signed_meter_value() {
+    // This is used only inside of the state machine, so we do not need to lock here.
+    return take_signed_meter_data(shared_context.start_signed_meter_value);
 }
 
 bool Charger::switch_three_phases_while_charging(bool n) {
@@ -1124,17 +1205,22 @@ bool Charger::get_authorized_eim_ready_for_hlc() {
     return (auth and ready);
 }
 
+std::string Charger::get_session_id() const {
+    return shared_context.session_uuid;
+}
+
 void Charger::authorize(bool a, const types::authorization::ProvidedIdToken& token) {
     Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::Charger_authorize);
     if (a) {
+        shared_context.id_token = token;
         // First user interaction was auth? Then start session already here and not at plug in
         if (not shared_context.session_active) {
             start_session(true);
         }
+        signal_simple_event(types::evse_manager::SessionEventEnum::Authorized);
         shared_context.authorized = true;
         shared_context.authorized_pnc =
             token.authorization_type == types::authorization::AuthorizationType::PlugAndCharge;
-        shared_context.id_token = token;
     } else {
         if (shared_context.session_active) {
             stop_session();
@@ -1149,6 +1235,7 @@ bool Charger::deauthorize() {
 }
 
 bool Charger::deauthorize_internal() {
+    signal_simple_event(types::evse_manager::SessionEventEnum::Deauthorized);
     if (shared_context.session_active) {
         auto s = shared_context.current_state;
 

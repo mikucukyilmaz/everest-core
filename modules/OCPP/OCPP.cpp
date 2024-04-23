@@ -2,6 +2,7 @@
 // Copyright 2020 - 2022 Pionix GmbH and Contributors to EVerest
 #include "OCPP.hpp"
 #include "generated/types/ocpp.hpp"
+#include "ocpp/v16/types.hpp"
 #include <fmt/core.h>
 #include <fstream>
 
@@ -13,7 +14,7 @@
 namespace module {
 
 const std::string CERTS_SUB_DIR = "certs";
-const std::string INIT_SQL = "init.sql";
+const std::string SQL_CORE_MIGRTATIONS = "core_migrations";
 const std::string CHARGE_X_MREC_VENDOR_ID = "https://chargex.inl.gov";
 
 namespace fs = std::filesystem;
@@ -145,11 +146,13 @@ void OCPP::set_external_limits(const std::map<int32_t, ocpp::v16::EnhancedChargi
 void OCPP::publish_charging_schedules(
     const std::map<int32_t, ocpp::v16::EnhancedChargingSchedule>& charging_schedules) {
     // publish the schedule over mqtt
-    Object j;
-    for (const auto charging_schedule : charging_schedules) {
-        j[std::to_string(charging_schedule.first)] = charging_schedule.second;
+    types::ocpp::ChargingSchedules schedules;
+    for (const auto& charging_schedule : charging_schedules) {
+        types::ocpp::ChargingSchedule sch = conversions::to_charging_schedule(charging_schedule.second);
+        sch.connector = charging_schedule.first;
+        schedules.schedules.emplace_back(std::move(sch));
     }
-    this->p_ocpp_generic->publish_charging_schedules(j);
+    this->p_ocpp_generic->publish_charging_schedules(schedules);
 }
 
 void OCPP::process_session_event(int32_t evse_id, const types::evse_manager::SessionEvent& session_event) {
@@ -167,7 +170,7 @@ void OCPP::process_session_event(int32_t evse_id, const types::evse_manager::Ses
                    << "Received TransactionStarted";
         const auto transaction_started = session_event.transaction_started.value();
 
-        const auto timestamp = ocpp::DateTime(transaction_started.timestamp);
+        const auto timestamp = ocpp::DateTime(session_event.timestamp);
         const auto energy_Wh_import = transaction_started.meter_value.energy_Wh_import.total;
         const auto session_id = session_event.uuid;
         const auto id_token = transaction_started.id_tag.id_token.value;
@@ -203,7 +206,7 @@ void OCPP::process_session_event(int32_t evse_id, const types::evse_manager::Ses
                     << "Received TransactionFinished";
 
         const auto transaction_finished = session_event.transaction_finished.value();
-        const auto timestamp = ocpp::DateTime(transaction_finished.timestamp);
+        const auto timestamp = ocpp::DateTime(session_event.timestamp);
         const auto energy_Wh_import = transaction_finished.meter_value.energy_Wh_import.total;
         const auto signed_meter_value = transaction_finished.signed_meter_value;
 
@@ -425,7 +428,7 @@ void OCPP::init() {
         create_empty_user_config(user_config_path);
     }
 
-    const auto sql_init_path = this->ocpp_share_path / INIT_SQL;
+    const auto sql_init_path = this->ocpp_share_path / SQL_CORE_MIGRTATIONS;
     if (!fs::exists(this->config.MessageLogPath)) {
         try {
             fs::create_directory(this->config.MessageLogPath);
@@ -717,7 +720,8 @@ void OCPP::ready() {
         });
 
     this->charge_point->register_transaction_updated_callback(
-        [this](const int32_t connector, const std::string& session_id, const int32_t transaction_id) {
+        [this](const int32_t connector, const std::string& session_id, const int32_t transaction_id,
+               const ocpp::v16::IdTagInfo& id_tag_info) {
             types::ocpp::OcppTransactionEvent tevent = {types::ocpp::TransactionEvent::Updated, connector, 1,
                                                         session_id, std::to_string(transaction_id)};
             p_ocpp_generic->publish_ocpp_transaction_event(tevent);
