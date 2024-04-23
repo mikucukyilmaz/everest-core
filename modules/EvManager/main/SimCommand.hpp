@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
 
-#ifndef TMP_CLION_CLANG_TIDY_SIMCOMMAND_HPP
-#define TMP_CLION_CLANG_TIDY_SIMCOMMAND_HPP
+#pragma once
 
+#include "RegisteredCommand.hpp"
 #include <cstddef>
 #include <memory>
 #include <mutex>
@@ -15,20 +15,17 @@
 
 namespace module::main {
 
-class RegisteredCommandBase;
-
 class SimCommand {
 public:
-    SimCommand(std::string commandName, std::vector<std::string> arguments);
+    SimCommand(std::string&& commandName, std::vector<std::string>&& arguments);
+    SimCommand(const std::string& commandName, const std::vector<std::string>& arguments);
 
-    bool execute();
+    bool execute() const;
 
 private:
     std::vector<std::string> arguments;
 
-    const RegisteredCommandBase& registeredCommand;
+    const RegisteredCommandBase* registeredCommand;
 };
 
 } // namespace module::main
-
-#endif // TMP_CLION_CLANG_TIDY_SIMCOMMAND_HPP

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
 
-#ifndef EVEREST_CORE_SIMDATA_HPP
-#define EVEREST_CORE_SIMDATA_HPP
+#pragma once
 
 #include "SimCommand.hpp"
 #include "generated/types/board_support_common.hpp"
@@ -55,8 +54,6 @@ struct SimData {
 
     types::board_support_common::Event actualBspEvent{};
 
-
-
     std::queue<SimCommand> commandQueue;
 };
 
@@ -73,5 +70,3 @@ std::queue<SimCommand>
 compileCommands(std::vector<std::pair<std::string, std::vector<std::string>>>& commandsWithArguments);
 
 } // namespace module::main
-
-#endif // EVEREST_CORE_SIMDATA_HPP

@@ -529,7 +529,7 @@ void car_simulatorImpl::setupEVParameters() {
 void car_simulatorImpl::callEVBoardSupportFunctions() {
     mod->r_ev_board_support->call_allow_power_on(false);
 
-    mod->r_ev_board_support->call_set_ac_max_current(mod->config.max_curent);
+    mod->r_ev_board_support->call_set_ac_max_current(mod->config.max_current);
     mod->r_ev_board_support->call_set_three_phases(mod->config.three_phases);
 }
 void car_simulatorImpl::subscribeToExternalMQTT() {

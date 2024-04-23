@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
 
-#ifndef TMP_CLION_CLANG_TIDY_SIMCOMMAND_HPP
-#define TMP_CLION_CLANG_TIDY_SIMCOMMAND_HPP
+#pragma once
 
 #include <cstddef>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -19,7 +17,7 @@ template <typename Func> class RegisteredCommand;
 class RegisteredCommandBase {
 public:
     RegisteredCommandBase() = default;
-    virtual ~RegisteredCommandBase(){};
+    virtual ~RegisteredCommandBase() = default;
     RegisteredCommandBase(const RegisteredCommandBase&) = default;
     RegisteredCommandBase& operator=(const RegisteredCommandBase&) = default;
     RegisteredCommandBase(RegisteredCommandBase&&) = default;
@@ -34,8 +32,14 @@ public:
                                                         commandName, argumentCount, std::forward<FunctionT>(function)));
     }
 
-    static const RegisteredCommandBase& getRegisteredCommand(const std::string& commandName) {
-        return *registeredCommands.at(commandName).get();
+    static const RegisteredCommandBase* getRegisteredCommand(const std::string& commandName) {
+
+        try {
+            const auto& registeredCommand = registeredCommands.at(commandName);
+            return registeredCommand.get();
+        } catch (const std::out_of_range&) {
+            throw std::invalid_argument{"Command not found"};
+        }
     }
 
 private:
@@ -51,7 +55,7 @@ public:
     ~RegisteredCommand() override = default;
 
     bool operator()(const std::vector<std::string>& arguments) const override {
-        if (!arguments.empty() && arguments.size() != argumentCount) {
+        if (arguments.size() != argumentCount) {
             throw std::invalid_argument{"Invalid number of arguments"};
         }
         return function(arguments);
@@ -63,5 +67,3 @@ private:
     FunctionT function;
 };
 } // namespace module::main
-
-#endif
