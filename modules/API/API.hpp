@@ -60,7 +60,7 @@ public:
     void set_latest_total_w(double latest_total_w);
     void set_uk_random_delay_remaining(const types::uk_random_delay::CountDown& c);
     void set_enable_disable_source(const std::string& active_source, const std::string& active_state,
-                                            const int active_priority);
+                                   const int active_priority);
 
     /// \brief Converts this struct into a serialized json object
     operator std::string();
