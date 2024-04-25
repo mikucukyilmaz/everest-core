@@ -33,7 +33,7 @@ public:
     // ev@8ea32d28-373f-4c90-ae5e-b4fcc74e2a61:v1
 
 protected:
-    // commandName handler functions (virtual)
+    // command handler functions (virtual)
     virtual void handle_enable(bool& value) override;
     virtual void handle_executeChargingSession(std::string& value) override;
 
@@ -61,11 +61,15 @@ private:
     void setupEVParameters();
     void callEVBoardSupportFunctions();
     void subscribeToExternalMQTT();
+    void resetSimDataToDefaults();
 
+    std::unique_ptr<CommandRegistry> commandRegistry;
     std::unique_ptr<SimData> simData;
     std::optional<bool> enabled;
-    std::optional<size_t> loopIntervalMs;
+    std::atomic<bool> executionActive{false};
     const size_t defaultLoopIntervalMs{250};
+    std::optional<size_t> loopIntervalMs{};
+    std::optional<size_t> sleepTicksLeft{};
 
     std::thread simulationThread;
     // ev@3370e4dd-95f4-47a9-aaec-ea76f34a66c9:v1

@@ -450,7 +450,7 @@ function registerAllCmds(mod) {
 
     registerCmd(mod, 'iso_wait_for_resume', 0, () => false);
 
-    registerCmd(mod, 'iso_start_bcb_toogle', 1, (mod, c) => {
+    registerCmd(mod, 'iso_start_bcb_toggle', 1, (mod, c) => {
       mod.state = 'bcb_toggle';
       if (mod.bcb_toggles >= c.args[0] || mod.bcb_toggles === 3) {
         mod.bcb_toggles = 0;

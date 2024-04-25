@@ -29,6 +29,7 @@ struct Conf {
     int connector_id;
     bool auto_enable;
     bool auto_exec;
+    bool auto_exec_infinite;
     std::string auto_exec_commands;
     int dc_max_current_limit;
     int dc_max_power_limit;

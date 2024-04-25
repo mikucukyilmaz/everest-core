@@ -16,11 +16,14 @@ target_sources(${MODULE_NAME}
         "main/car_simulatorImpl.cpp"
         "main/SimData.cpp"
         "main/SimCommand.cpp"
-        "main/RegisteredCommand.cpp"
+        "main/CommandRegistry.cpp"
 )
 
 # ev@c55432ab-152c-45a9-9d2e-7281d50c69c3:v1
 # insert other things like install cmds etc here
+target_compile_features(${MODULE_NAME} PRIVATE cxx_std_17)
+set_target_properties(${MODULE_NAME} PROPERTIES CXX_EXTENSIONS OFF)
+
 if(EVEREST_CORE_BUILD_TESTING)
     add_subdirectory(tests)
 endif()

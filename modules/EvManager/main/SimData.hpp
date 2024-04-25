@@ -3,8 +3,9 @@
 
 #pragma once
 
+#include "CommandRegistry.hpp"
 #include "SimCommand.hpp"
-#include "generated/types/board_support_common.hpp"
+#include <generated/types/board_support_common.hpp>
 #include <optional>
 #include <queue>
 #include <string>
@@ -27,9 +28,6 @@ enum class SimState {
 };
 
 struct SimData {
-    bool executionActive{false};
-    size_t loopCurrentCommandIndex{0};
-
     SimState state{SimState::UNPLUGGED};
     SimState lastState{SimState::UNPLUGGED};
     std::string slacState;
@@ -55,18 +53,20 @@ struct SimData {
     types::board_support_common::Event actualBspEvent{};
 
     std::queue<SimCommand> commandQueue;
+
+    static std::queue<SimCommand> parseSimCommands(const std::string& value, const CommandRegistry& registeredCommands);
+
+private:
+    using RawCommands = std::vector<std::string>;
+    using Arguments = std::vector<std::string>;
+    using CommandWithArguments = std::pair<std::string, Arguments>;
+    using CommandsWithArguments = std::vector<CommandWithArguments>;
+
+    static RawCommands convertCommandsStringToVector(const std::string& commands);
+    static CommandsWithArguments splitIntoCommandsWithArguments(std::vector<std::string>& commandsVector);
+    static CommandWithArguments splitIntoCommandWithArguments(std::string& command);
+    static std::queue<SimCommand> compileCommands(CommandsWithArguments& commandsWithArguments,
+                                                  const CommandRegistry& commandRegistry);
 };
-
-std::queue<SimCommand> parseSimCommands(const std::string& value);
-
-std::vector<std::string> convertCommandsStringToVector(const std::string_view& commands);
-
-std::vector<std::pair<std::string, std::vector<std::string>>>
-splitIntoCommandsWithArguments(std::vector<std::string>& commandsVector);
-
-std::pair<std::string, std::vector<std::string>> splitIntoCommandWithArguments(std::string& command);
-
-std::queue<SimCommand>
-compileCommands(std::vector<std::pair<std::string, std::vector<std::string>>>& commandsWithArguments);
 
 } // namespace module::main

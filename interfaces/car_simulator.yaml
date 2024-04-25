@@ -5,10 +5,7 @@ description: >-
 cmds:
   enable:
     description: >-
-      # TODO: change description
-      Sets the ID that uniquely identifies the EVSE. The EVSEID shall
-      match the following structure: <EVSEID> = <Country Code> <S> <EVSE Operator
-      ID> <S> <ID Type> <Power Outlet ID>
+      Enables or disables the simulation.
     arguments:
       value:
         description: Enable/Disable simulation mode

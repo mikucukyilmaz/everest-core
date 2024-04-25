@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "RegisteredCommand.hpp"
+#include "CommandRegistry.hpp"
 #include <cstddef>
 #include <memory>
 #include <mutex>
@@ -17,8 +17,7 @@ namespace module::main {
 
 class SimCommand {
 public:
-    SimCommand(std::string&& commandName, std::vector<std::string>&& arguments);
-    SimCommand(const std::string& commandName, const std::vector<std::string>& arguments);
+    SimCommand(const RegisteredCommandBase* registeredCommandIn, const std::vector<std::string>& arguments);
 
     bool execute() const;
 
