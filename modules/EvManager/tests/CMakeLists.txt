@@ -1,6 +1,8 @@
 set(TARGET_NAME test_${PROJECT_NAME}_EvManager)
 add_executable(${TARGET_NAME})
 
+add_dependencies(${TEST_TARGET_NAME} ${MODULE_NAME})
+
 target_sources(${TARGET_NAME}
     PRIVATE
         RegisteredCommand.test.cpp
