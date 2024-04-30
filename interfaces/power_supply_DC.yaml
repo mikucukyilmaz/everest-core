@@ -6,7 +6,7 @@ description: >-
      The charging logic in EvseManager will not allow any charging until it receives the capabilities at least once.
      Capabilities may be published at any later point in time to update the values. This may happen if they e.g. change due
      to thermal derating etc. If a charging session is active when the update is received,
-     only power/current limits will be applied immediately. All other values will become active until the next charging session.
+     only power/current limits will be applied immediately. All other values will become active at the next charging session.
 
   2) setMode/setVoltageCurrent commands should be executed on the hardware immediately. If this is not possible because an error is currently active
      (e.g. communication to the hardware is lost), the driver module shall cache the last mode and voltage/current settings.
