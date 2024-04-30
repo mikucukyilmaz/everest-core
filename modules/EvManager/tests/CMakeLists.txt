@@ -1,9 +1,16 @@
-set(TARGET_NAME test_${PROJECT_NAME}_EvManager)
-add_executable(${TARGET_NAME})
+set(TEST_TARGET_NAME ${PROJECT_NAME}_EvManager_tests)
+add_executable(${TEST_TARGET_NAME})
 
 add_dependencies(${TEST_TARGET_NAME} ${MODULE_NAME})
 
-target_sources(${TARGET_NAME}
+get_target_property(GENERATED_INCLUDE_DIR generate_cpp_files EVEREST_GENERATED_INCLUDE_DIR)
+target_include_directories(${TEST_TARGET_NAME} PRIVATE
+    . ..
+    ${GENERATED_INCLUDE_DIR}
+    ${CMAKE_BINARY_DIR}/generated/modules/${MODULE_NAME}
+)
+
+target_sources(${TEST_TARGET_NAME}
     PRIVATE
         RegisteredCommand.test.cpp
         SimCommand.test.cpp
@@ -12,14 +19,11 @@ target_sources(${TARGET_NAME}
         ../main/SimData.cpp
 )
 
-get_target_property(GENERATED_INCLUDE_DIR generate_cpp_files EVEREST_GENERATED_INCLUDE_DIR)
-target_include_directories(${TARGET_NAME} PRIVATE
-    . ..
-    ${GENERATED_INCLUDE_DIR}
-    ${CMAKE_BINARY_DIR}/generated/modules/${MODULE_NAME}
+target_compile_definitions(${TEST_TARGET_NAME} PRIVATE
+    BUILD_TESTING_MODULE_EV_MANAGER
 )
 
-target_link_libraries(${TARGET_NAME}
+target_link_libraries(${TEST_TARGET_NAME}
     PRIVATE
         everest::framework
         everest::log
@@ -29,7 +33,7 @@ target_link_libraries(${TARGET_NAME}
 if (NOT DISABLE_EDM)
     list(APPEND CMAKE_MODULE_PATH ${CPM_PACKAGE_catch2_SOURCE_DIR}/extras)
     include(Catch)
-    catch_discover_tests(${TARGET_NAME})
+    catch_discover_tests(${TEST_TARGET_NAME})
 endif ()
 
-add_test(${TARGET_NAME} ${TARGET_NAME})
+add_test(${TEST_TARGET_NAME} ${TEST_TARGET_NAME})
