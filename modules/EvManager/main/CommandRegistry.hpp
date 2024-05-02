@@ -60,9 +60,9 @@ public:
 
 template <typename FunctionT> class RegisteredCommand : public RegisteredCommandBase {
 public:
-    RegisteredCommand(car_simulatorImpl* simulator, std::string commandNameIn, std::size_t argumentCountIn,
+    RegisteredCommand(car_simulatorImpl* simulatorIn, std::string commandNameIn, std::size_t argumentCountIn,
                       FunctionT functionIn) :
-        simulator{simulator},
+        simulator{simulatorIn},
         commandName{std::move(commandNameIn)},
         argumentCount{argumentCountIn},
         function{std::move(functionIn)} {

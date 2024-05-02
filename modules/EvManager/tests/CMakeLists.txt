@@ -10,7 +10,7 @@ target_include_directories(${TEST_TARGET_NAME}
 )
 
 target_sources(${TEST_TARGET_NAME}
-    PRIVATE
+        PRIVATE
         CommandRegistry.test.cpp
         SimCommand.test.cpp
         ../main/SimCommand.cpp
@@ -19,11 +19,11 @@ target_sources(${TEST_TARGET_NAME}
 )
 
 target_compile_definitions(${TEST_TARGET_NAME} PRIVATE
-    BUILD_TESTING_MODULE_EV_MANAGER
+        BUILD_TESTING_MODULE_EV_MANAGER
 )
 
 target_link_libraries(${TEST_TARGET_NAME}
-    PRIVATE
+        PRIVATE
         everest::framework
         everest::log
         Catch2::Catch2WithMain

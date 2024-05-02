@@ -58,7 +58,7 @@ active_modules:
   imd:
     module: IMDSimulator
   ev_manager:
-    module: JsEvManager
+    module: EvManager
     config_module:
       connector_id: 1
       auto_enable: true

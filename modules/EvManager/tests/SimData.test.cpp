@@ -3,6 +3,7 @@
 
 #include "../main/SimData.hpp"
 #include "../main/CommandRegistry.hpp"
+#include "../main/SimCommand.hpp"
 #include "catch2/matchers/catch_matchers.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <vector>

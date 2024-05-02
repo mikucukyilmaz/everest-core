@@ -2,13 +2,15 @@
 // Copyright Pionix GmbH and Contributors to EVerest
 
 #include "car_simulatorImpl.hpp"
-#include "main/SimCommand.hpp"
+#include "Constants.hpp"
+#include "SimCommand.hpp"
 #include <everest/logging.hpp>
 
 namespace module::main {
 
 void car_simulatorImpl::init() {
-    loopIntervalMs = defaultLoopIntervalMs;
+    enabled = false;
+    loopIntervalMs = DEFAULT_LOOP_INTERVAL_MS;
     resetSimDataToDefaults();
     registerAllCommands();
     subscribeToExternalMQTT();
@@ -16,8 +18,6 @@ void car_simulatorImpl::init() {
 }
 
 void car_simulatorImpl::ready() {
-    enabled = false;
-
     setupEVParameters();
 
     if (mod->config.auto_enable) {
@@ -31,17 +31,13 @@ void car_simulatorImpl::ready() {
 }
 
 void car_simulatorImpl::handle_enable(bool& value) {
-    if (!enabled.has_value()) {
-        EVLOG_warning << "Already received data, but framework is not ready yet.";
-        return;
-    }
-
     if (enabled == value) {
         // ignore if value is the same
+        EVLOG_warning << "Enabled value didn't change, ignoring enable!";
         return;
     }
 
-    simData = std::make_unique<SimData>();
+    resetSimDataToDefaults();
 
     callEVBoardSupportFunctions();
 
@@ -50,7 +46,6 @@ void car_simulatorImpl::handle_enable(bool& value) {
         simulationThread = std::thread{&car_simulatorImpl::handleSimulationLoop, this};
     } else {
         enabled = false;
-        loopIntervalMs.reset();
         simulationThread.join();
     }
 
@@ -59,7 +54,6 @@ void car_simulatorImpl::handle_enable(bool& value) {
 }
 
 void car_simulatorImpl::handle_executeChargingSession(std::string& value) {
-    // Check enabled
     if (!checkCanExecute()) {
         return;
     }
@@ -67,11 +61,10 @@ void car_simulatorImpl::handle_executeChargingSession(std::string& value) {
     executionActive = false;
     resetSimDataToDefaults();
 
-    auto& commandQueue = simData->commandQueue;
-    commandQueue = SimData::parseSimCommands(value, *commandRegistry);
+    updateCommandQueue(value);
 
-    // Start execution
-    if (!commandQueue.empty()) {
+    std::lock_guard<std::mutex> lock{simDataMutex};
+    if (!simData->commandQueue.empty()) {
         executionActive = true;
     }
 }
@@ -83,9 +76,10 @@ void car_simulatorImpl::handle_modifyChargingSession(std::string& value) {
     }
 
     executionActive = false;
-    auto valueCopy = value;
-    simData->commandQueue = SimData::parseSimCommands(valueCopy, *commandRegistry);
 
+    updateCommandQueue(value);
+
+    std::lock_guard<std::mutex> lock{simDataMutex};
     if (!simData->commandQueue.empty()) {
         executionActive = true;
     }
@@ -93,13 +87,9 @@ void car_simulatorImpl::handle_modifyChargingSession(std::string& value) {
 
 void car_simulatorImpl::handleSimulationLoop() {
     while (enabled) {
-        if (simData && executionActive) {
-            if (loopIntervalMs.has_value()) {
-                runSimulationLoop();
-                std::this_thread::sleep_for(std::chrono::milliseconds(loopIntervalMs.value()));
-            } else {
-                break;
-            }
+        if (simData != nullptr && executionActive) {
+            runSimulationLoop();
+            std::this_thread::sleep_for(std::chrono::milliseconds(loopIntervalMs));
         }
     }
     EVLOG_debug << "Finished simulation.";
@@ -117,20 +107,24 @@ void car_simulatorImpl::registerAllCommands() {
     commandRegistry = std::make_unique<CommandRegistry>(this);
 
     const auto sleepFunction = [](car_simulatorImpl* const simulator, const std::vector<std::string>& arguments) {
-        if (!simulator->sleepTicksLeft.has_value()) {
-            const auto sleepTime = std::stoll(arguments[0]);
+        if (!simulator->simData->sleepTicksLeft.has_value()) {
+            const auto sleepTime = std::stold(arguments[0]);
             const auto sleepTimeMs = sleepTime * 1000;
-            simulator->sleepTicksLeft = static_cast<long long>(static_cast<double>(sleepTimeMs) /
-                                                               static_cast<double>(simulator->loopIntervalMs.value())) +
-                                        1;
+            simulator->simData->sleepTicksLeft = static_cast<long long>(sleepTimeMs / simulator->loopIntervalMs) + 1;
         }
-        simulator->sleepTicksLeft = simulator->sleepTicksLeft.value() - 1;
-        return (!(simulator->sleepTicksLeft > 0));
+        simulator->simData->sleepTicksLeft = simulator->simData->sleepTicksLeft.value() - 1;
+        if (!(simulator->simData->sleepTicksLeft > 0)) {
+            simulator->simData->sleepTicksLeft.reset();
+            return true;
+        } else {
+            return false;
+        }
     };
     commandRegistry->registerCommand("sleep", 1, sleepFunction);
 
     const auto iec_wait_pwr_readyFunction = [](car_simulatorImpl* const simulator,
                                                const std::vector<std::string>& arguments) {
+        simulator->simData->state = SimState::PLUGGED_IN;
         return (simulator->simData->pwm_duty_cycle > 7.0f && simulator->simData->pwm_duty_cycle < 97.0f);
     };
     commandRegistry->registerCommand("iec_wait_pwr_ready", 0, iec_wait_pwr_readyFunction);
@@ -145,7 +139,7 @@ void car_simulatorImpl::registerAllCommands() {
     const auto draw_power_regulatedFunction = [](car_simulatorImpl* const simulator,
                                                  const std::vector<std::string>& arguments) {
         simulator->mod->r_ev_board_support->call_set_ac_max_current(std::stod(arguments[0]));
-        if (arguments[1] == "3") {
+        if (arguments[1] == THREE_PHASES) {
             simulator->mod->r_ev_board_support->call_set_three_phases(true);
         } else {
             simulator->mod->r_ev_board_support->call_set_three_phases(false);
@@ -158,7 +152,7 @@ void car_simulatorImpl::registerAllCommands() {
     const auto draw_power_fixedFunction = [](car_simulatorImpl* const simulator,
                                              const std::vector<std::string>& arguments) {
         simulator->mod->r_ev_board_support->call_set_ac_max_current(std::stod(arguments[0]));
-        if (arguments[1] == "3") {
+        if (arguments[1] == THREE_PHASES) {
             simulator->mod->r_ev_board_support->call_set_three_phases(true);
         } else {
             simulator->mod->r_ev_board_support->call_set_three_phases(false);
@@ -198,82 +192,82 @@ void car_simulatorImpl::registerAllCommands() {
     };
     commandRegistry->registerCommand("rcd_current", 1, rcd_currentFunction);
 
-    const auto iso_wait_slac_matchedFunction = [](car_simulatorImpl* const simulator,
-                                                  const std::vector<std::string>& arguments) {
-        simulator->simData->state = SimState::PLUGGED_IN;
+    if (!mod->r_slac.empty()) {
+        EVLOG_debug << "Slac undefined";
+        const auto iso_wait_slac_matchedFunction = [](car_simulatorImpl* const simulator,
+                                                      const std::vector<std::string>& arguments) {
+            simulator->simData->state = SimState::PLUGGED_IN;
 
-        if (simulator->mod->r_slac.empty()) {
-            EVLOG_debug << "Slac undefined";
-        }
-        if (simulator->simData->slacState == "UNMATCHED") {
-            EVLOG_debug << "Slac UNMATCHED";
-            if (!simulator->mod->r_slac.empty()) {
-                EVLOG_debug << "Slac trigger matching";
-                simulator->mod->r_slac[0]->call_reset();
-                simulator->mod->r_slac[0]->call_trigger_matching();
-                simulator->simData->slacState = "TRIGGERED";
+            if (simulator->simData->slacState == "UNMATCHED") {
+                EVLOG_debug << "Slac UNMATCHED";
+                if (!simulator->mod->r_slac.empty()) {
+                    EVLOG_debug << "Slac trigger matching";
+                    simulator->mod->r_slac[0]->call_reset();
+                    simulator->mod->r_slac[0]->call_trigger_matching();
+                    simulator->simData->slacState = "TRIGGERED";
+                }
             }
-        }
-        if (simulator->simData->slacState == "MATCHED") {
-            EVLOG_debug << "Slac Matched";
-            return true;
-        }
-        return false;
-    };
-    commandRegistry->registerCommand("iso_wait_slac_matched", 0, iso_wait_slac_matchedFunction);
+            if (simulator->simData->slacState == "MATCHED") {
+                EVLOG_debug << "Slac Matched";
+                return true;
+            }
+            return false;
+        };
+        commandRegistry->registerCommand("iso_wait_slac_matched", 0, iso_wait_slac_matchedFunction);
+    }
 
     if (!mod->r_ev.empty()) {
+        const auto iso_wait_pwr_readyFunction = [](car_simulatorImpl* const simulator,
+                                                   const std::vector<std::string>& arguments) {
+            if (simulator->simData->iso_pwr_ready) {
+                simulator->simData->state = SimState::ISO_POWER_READY;
+                return true;
+            }
+            return false;
+        };
+        commandRegistry->registerCommand("iso_wait_pwr_ready", 0, iso_wait_pwr_readyFunction);
+
+        const auto iso_dc_power_onFunction = [](car_simulatorImpl* const simulator,
+                                                const std::vector<std::string>& arguments) {
+            simulator->simData->state = SimState::ISO_POWER_READY;
+            if (simulator->simData->dc_power_on) {
+                simulator->simData->state = SimState::ISO_CHARGING_REGULATED;
+                simulator->mod->r_ev_board_support->call_allow_power_on(true);
+                return true;
+            }
+            return false;
+        };
+        commandRegistry->registerCommand("iso_dc_power_on", 0, iso_dc_power_onFunction);
+
         const auto iso_start_v2g_sessionFunction = [](car_simulatorImpl* const simulator,
                                                       const std::vector<std::string>& arguments) {
             const auto& argument = arguments[0];
-            if (argument == "ac_single_phase_core") {
-                simulator->simData->energymode = "AC_single_phase_core";
-            } else if (argument == "ac_three_phase_core") {
-                simulator->simData->energymode = "AC_three_phase_core";
-            } else if (argument == "dc_core") {
-                simulator->simData->energymode = "DC_core";
-            } else if (argument == "dc_extended") {
-                simulator->simData->energymode = "DC_extended";
-            } else if (argument == "dc_combo_core") {
-                simulator->simData->energymode = "DC_combo_core";
-            } else if (argument == "dc_unique") {
-                simulator->simData->energymode = "DC_unique";
+            if (argument == EnergyMode::AC_SINGLE_PHASE_CORE) {
+                simulator->simData->energymode = &EnergyMode::AC_SINGLE_PHASE_CORE;
+            } else if (argument == EnergyMode::AC_THREE_PHASE_CORE) {
+                simulator->simData->energymode = &EnergyMode::AC_THREE_PHASE_CORE;
+            } else if (argument == EnergyMode::DC_CORE) {
+                simulator->simData->energymode = &EnergyMode::DC_CORE;
+            } else if (argument == EnergyMode::DC_EXTENDED) {
+                simulator->simData->energymode = &EnergyMode::DC_EXTENDED;
+            } else if (argument == EnergyMode::DC_COMBO_CORE) {
+                simulator->simData->energymode = &EnergyMode::DC_COMBO_CORE;
+            } else if (argument == EnergyMode::DC_UNIQUE) {
+                simulator->simData->energymode = &EnergyMode::DC_UNIQUE;
             } else {
                 return false;
             }
 
-            simulator->mod->r_ev[0]->call_start_charging(simulator->simData->energymode);
+            simulator->mod->r_ev[0]->call_start_charging(*simulator->simData->energymode);
             return true;
         };
         commandRegistry->registerCommand("iso_start_v2g_session", 1, iso_start_v2g_sessionFunction);
     }
 
-    const auto iso_wait_pwr_readyFunction = [](car_simulatorImpl* const simulator,
-                                               const std::vector<std::string>& arguments) {
-        if (simulator->simData->iso_pwr_ready) {
-            simulator->simData->state = SimState::ISO_POWER_READY;
-            return true;
-        }
-        return false;
-    };
-    commandRegistry->registerCommand("iso_wait_pwr_ready", 0, iso_wait_pwr_readyFunction);
-
-    const auto iso_dc_power_onFunction = [](car_simulatorImpl* const simulator,
-                                            const std::vector<std::string>& arguments) {
-        simulator->simData->state = SimState::ISO_POWER_READY;
-        if (simulator->simData->dc_power_on) {
-            simulator->simData->state = SimState::ISO_CHARGING_REGULATED;
-            simulator->mod->r_ev_board_support->call_allow_power_on(true);
-            return true;
-        }
-        return false;
-    };
-    commandRegistry->registerCommand("iso_dc_power_on", 0, iso_dc_power_onFunction);
-
     const auto iso_draw_power_regulatedFunction = [](car_simulatorImpl* const simulator,
                                                      const std::vector<std::string>& arguments) {
         simulator->mod->r_ev_board_support->call_set_ac_max_current(std::stod(arguments[0]));
-        if (arguments[1] == "3") {
+        if (arguments[1] == THREE_PHASES) {
             simulator->mod->r_ev_board_support->call_set_three_phases(true);
         } else {
             simulator->mod->r_ev_board_support->call_set_three_phases(false);
@@ -295,14 +289,12 @@ void car_simulatorImpl::registerAllCommands() {
 
         const auto iso_wait_for_stop = [](car_simulatorImpl* const simulator,
                                           const std::vector<std::string>& arguments) {
-            if (!simulator->sleepTicksLeft.has_value()) {
-                simulator->sleepTicksLeft =
-                    std::stoll(arguments[0]) *
-                        static_cast<long>(1 / static_cast<float>(simulator->loopIntervalMs.value())) +
-                    1;
+            if (!simulator->simData->sleepTicksLeft.has_value()) {
+                simulator->simData->sleepTicksLeft =
+                    std::stoll(arguments[0]) * static_cast<long>(1 / static_cast<float>(simulator->loopIntervalMs)) + 1;
             }
-            simulator->sleepTicksLeft = simulator->sleepTicksLeft.value() - 1;
-            if (!simulator->sleepTicksLeft > 0) {
+            simulator->simData->sleepTicksLeft = simulator->simData->sleepTicksLeft.value() - 1;
+            if (!simulator->simData->sleepTicksLeft > 0) {
                 simulator->mod->r_ev[0]->call_stop_charging();
                 simulator->mod->r_ev_board_support->call_allow_power_on(false);
                 simulator->simData->state = SimState::PLUGGED_IN;
@@ -384,10 +376,6 @@ void car_simulatorImpl::carStateMachine() {
             EVLOG_info << "Unplug detected, restarting simulation.";
             simData->slacState = "UNMATCHED";
             mod->r_ev[0]->call_stop_charging();
-            if (mod->config.auto_exec) {
-                auto valueCopy = mod->config.auto_exec_commands;
-                handle_executeChargingSession(valueCopy);
-            }
         }
         break;
     case SimState::PLUGGED_IN:
@@ -454,7 +442,8 @@ void car_simulatorImpl::carStateMachine() {
 }
 
 void car_simulatorImpl::runSimulationLoop() {
-    // Execute sim commands until a command blocks or we are finished
+    // Execute sim commands until a command blocks, or we are finished
+    std::lock_guard<std::mutex> lock{simDataMutex};
     auto& commandQueue = simData->commandQueue;
     while (executionActive && !commandQueue.empty()) {
         auto& currentCommand = commandQueue.front();
@@ -478,13 +467,7 @@ void car_simulatorImpl::runSimulationLoop() {
 }
 
 bool car_simulatorImpl::checkCanExecute() {
-    if (!enabled.has_value()) {
-        EVLOG_warning << "Already received data, but framework is not ready yet.";
-        return false;
-    }
-
-    const auto enabledValue = enabled.value();
-    if (!enabledValue) {
+    if (!enabled) {
         EVLOG_warning << "Simulation disabled, cannot execute charging simulation.";
         return false;
     }
@@ -498,13 +481,13 @@ bool car_simulatorImpl::checkCanExecute() {
 
 void car_simulatorImpl::subscribeToVariablesOnInit() {
     // subscribe bsp_event
+    std::lock_guard<std::mutex> lock{simDataMutex};
     using types::board_support_common::BspEvent;
     mod->r_ev_board_support->subscribe_bsp_event([this](const auto& bsp_event) {
         simData->actualBspEvent = bsp_event.event;
         if (bsp_event.event == types::board_support_common::Event::Disconnected &&
             simData->state == main::SimState::UNPLUGGED) {
             executionActive = false;
-            simData->state = main::SimState::UNPLUGGED;
         }
     });
 
@@ -580,7 +563,14 @@ void car_simulatorImpl::subscribeToExternalMQTT() {
                    });
 }
 void car_simulatorImpl::resetSimDataToDefaults() {
+    std::lock_guard<std::mutex> lock{simDataMutex};
     simData = std::make_unique<SimData>();
+}
+
+void car_simulatorImpl::updateCommandQueue(std::string& value) {
+    std::lock_guard<std::mutex> lock{simDataMutex};
+    auto& commandQueue = simData->commandQueue;
+    commandQueue = SimData::parseSimCommands(value, *commandRegistry);
 }
 
 } // namespace module::main

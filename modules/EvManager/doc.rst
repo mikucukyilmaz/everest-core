@@ -1,22 +1,45 @@
 .. _everest_modules_handwritten_EvManager:
 
-..  This file is a placeholder for an optional single file
-    handwritten documentation for the EvManager module.
-    Please decide whether you want to use this single file,
-    or a set of files in the doc/ directory.
-    In the latter case, you can delete this file.
-    In the former case, you can delete the doc/ directory.
-    
-..  This handwritten documentation is optional. In case
-    you do not want to write it, you can delete this file
-    and the doc/ directory.
-
-..  The documentation can be written in reStructuredText,
-    and will be converted to HTML and PDF by Sphinx.
-
-*******************************************
+=====
 EvManager
-*******************************************
+=====
 
-:ref:`Link <everest_modules_EvManager>` to the module's reference.
-This module implements a Car simulator that can execute charging sessions using the yeti-simulation-control interface
+This Module implements the car simulator for a charging session.
+
+Configuration
+_____________
+
+``connector_id``
+    The connector id of the EVSE Manager
+    to which the simulator connects to.
+
+External MQTT
+-------------
+
+The module listens to the following MQTT topics:
+
+``everest_external/nodered/{connector_id}/carsim/cmd/enable``
+    | Used to enable the car simulator.
+    | Possible values are:
+
+    - ``true``
+    - ``false``
+
+``everest_external/nodered/{connector_id}/carsim/cmd/execute_charging_session``
+    | Used to execute a charging session based on the semicolon separated provided command string.
+    ::
+
+        "sleep 1;iso_wait_slac_matched;iso_start_v2g_session DC_extended;iso_wait_pwr_ready;sleep 36000"
+
+    | (For all available commands see: `Simulator Commands`_)
+
+``everest_external/nodered/{connector_id}/carsim/cmd/modify_charging_session``
+    | Used to modify the current charging session.
+    | Follows the same format as ``execute_charging_session``.
+
+Simulator Commands
+------------------
+``sleep {time in seconds}``
+    | Sleeps for the specified time.
+    | Example: ``sleep 10``
+``test``

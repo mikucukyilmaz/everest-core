@@ -27,7 +27,7 @@ SimData::RawCommands SimData::convertCommandsStringToVector(const std::string& c
 
     // convert to lower case inplace
     std::transform(commands.begin(), commands.end(), commands.begin(),
-                   [](const auto character) { return std::tolower(character); });
+                   [](const auto& character) { return std::tolower(character); });
 
     // replace newlines with semicolons
     std::replace(commands.begin(), commands.end(), '\n', ';');

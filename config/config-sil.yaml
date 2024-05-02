@@ -40,7 +40,7 @@ active_modules:
       slac:
         - implementation_id: ev
           module_id: slac
-    module: JsEvManager
+    module: EvManager
   energy_manager:
     connections:
       energy_trunk:
@@ -102,13 +102,13 @@ active_modules:
     config_module:
       device: auto
       supported_ISO15118_2: true
-    connections: {}
+    connections: { }
     module: PyEvJosev
   iso15118_charger:
     config_module:
       device: auto
       tls_security: allow
-    connections: {}
+    connections: { }
     module: EvseV2G
     connections:
       security:
@@ -121,7 +121,7 @@ active_modules:
   persistent_store:
     config_module:
       sqlite_db_file_path: everest_persistent_store.db
-    connections: {}
+    connections: { }
     module: PersistentStore
   setup:
     config_module:
@@ -143,7 +143,7 @@ active_modules:
         evse_id: PIONIX_SAYS_HELLO
         nid: pionix!
         number_of_sounds: 10
-    connections: {}
+    connections: { }
     module: JsSlacSimulator
   token_provider:
     config_implementation:
@@ -161,12 +161,12 @@ active_modules:
         sleep: 0.25
         validation_reason: Token seems valid
         validation_result: Accepted
-    connections: {}
+    connections: { }
     module: DummyTokenValidator
   connector_1_powerpath:
     config_module:
       connector_id: 1
-    connections: {}
+    connections: { }
     module: JsYetiSimulator
     telemetry:
       id: 1
@@ -176,7 +176,7 @@ active_modules:
       x: 33
       y: 13
     terminals:
-      bottom: []
+      bottom: [ ]
       left:
         - id: evse_manager
           interface: evse_manager
@@ -185,7 +185,7 @@ active_modules:
         - id: main
           interface: empty
           type: provide
-      top: []
+      top: [ ]
   auth:
     position:
       x: 33
@@ -215,7 +215,7 @@ active_modules:
       x: 53
       y: 33
     terminals:
-      bottom: []
+      bottom: [ ]
       left:
         - id: simulation_control
           interface: yeti_simulation_control
@@ -302,7 +302,7 @@ active_modules:
         - id: yeti_simulation_control
           interface: yeti_simulation_control
           type: provide
-      top: []
+      top: [ ]
   energy_manager:
     position:
       x: -5
@@ -312,18 +312,18 @@ active_modules:
         - id: energy_trunk
           interface: energy
           type: requirement
-      left: []
+      left: [ ]
       right:
         - id: main
           interface: energy_manager
           type: provide
-      top: []
+      top: [ ]
   grid_connection_point:
     position:
       x: -5
       y: 13
     terminals:
-      bottom: []
+      bottom: [ ]
       left:
         - id: price_information
           interface: energy_price_information
@@ -351,42 +351,42 @@ active_modules:
         - id: ev
           interface: ISO15118_ev
           type: provide
-      left: []
+      left: [ ]
       right:
         - id: main
           interface: empty
           type: provide
-      top: []
+      top: [ ]
   iso15118_charger:
     position:
       x: -5
       y: 23
     terminals:
-      bottom: []
-      left: []
+      bottom: [ ]
+      left: [ ]
       right:
         - id: charger
           interface: ISO15118_charger
           type: provide
-      top: []
+      top: [ ]
   persistent_store:
     position:
       x: -5
       y: 40
     terminals:
-      bottom: []
-      left: []
+      bottom: [ ]
+      left: [ ]
       right:
         - id: main
           interface: kvs
           type: provide
-      top: []
+      top: [ ]
   setup:
     position:
       x: 13
       y: 40
     terminals:
-      bottom: []
+      bottom: [ ]
       left:
         - id: store
           interface: kvs
@@ -395,13 +395,13 @@ active_modules:
         - id: main
           interface: empty
           type: provide
-      top: []
+      top: [ ]
   slac:
     position:
       x: 33
       y: 33
     terminals:
-      bottom: []
+      bottom: [ ]
       left:
         - id: evse
           interface: slac
@@ -410,7 +410,7 @@ active_modules:
         - id: ev
           interface: slac
           type: provide
-      top: []
+      top: [ ]
   token_provider:
     position:
       x: 33
@@ -424,17 +424,17 @@ active_modules:
         - id: evse
           interface: evse_manager
           type: requirement
-      right: []
-      top: []
+      right: [ ]
+      top: [ ]
   token_validator:
     position:
       x: 51
       y: 2
     terminals:
-      bottom: []
+      bottom: [ ]
       left:
         - id: main
           interface: auth_token_validator
           type: provide
-      right: []
-      top: []
+      right: [ ]
+      top: [ ]

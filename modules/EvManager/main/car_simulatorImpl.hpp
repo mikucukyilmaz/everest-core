@@ -62,14 +62,16 @@ private:
     void callEVBoardSupportFunctions();
     void subscribeToExternalMQTT();
     void resetSimDataToDefaults();
+    void updateCommandQueue(std::string& value);
 
     std::unique_ptr<CommandRegistry> commandRegistry;
+
+    std::mutex simDataMutex;
     std::unique_ptr<SimData> simData;
-    std::optional<bool> enabled;
+
+    bool enabled;
     std::atomic<bool> executionActive{false};
-    const size_t defaultLoopIntervalMs{250};
-    std::optional<size_t> loopIntervalMs{};
-    std::optional<size_t> sleepTicksLeft{};
+    size_t loopIntervalMs{};
 
     std::thread simulationThread;
     // ev@3370e4dd-95f4-47a9-aaec-ea76f34a66c9:v1

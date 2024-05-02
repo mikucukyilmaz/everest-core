@@ -4,12 +4,12 @@
 #pragma once
 
 #include "CommandRegistry.hpp"
+#include "EnergyMode.hpp"
 #include "SimCommand.hpp"
 #include <generated/types/board_support_common.hpp>
 #include <optional>
 #include <queue>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -31,13 +31,15 @@ struct SimData {
     SimState state{SimState::UNPLUGGED};
     SimState lastState{SimState::UNPLUGGED};
     std::string slacState;
+    std::optional<size_t> sleepTicksLeft{};
 
     bool v2g_finished{false};
     bool iso_stopped{false};
     size_t evse_maxcurrent{0};
     size_t maxCurrent{0};
     std::string payment{"ExternalPayment"};
-    std::string energymode{"AC_single_phase_core"};
+    // pointer to const EnergyMode
+    EnergyMode const* energymode = &EnergyMode::AC_SINGLE_PHASE_CORE;
     bool iso_pwr_ready{false};
 
     size_t bcb_toggles{0};
@@ -46,9 +48,9 @@ struct SimData {
     types::board_support_common::Ampacity pp;
     float rcd_current_mA{0.0f};
     float pwm_duty_cycle{0.0f};
+    float last_pwm_duty_cycle{0.0f};
 
     bool dc_power_on{false};
-    size_t last_pwm_duty_cycle{0};
 
     types::board_support_common::Event actualBspEvent{};
 

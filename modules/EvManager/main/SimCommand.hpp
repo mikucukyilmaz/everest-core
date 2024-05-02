@@ -17,7 +17,7 @@ namespace module::main {
 
 class SimCommand {
 public:
-    SimCommand(const RegisteredCommandBase* registeredCommandIn, const std::vector<std::string>& arguments);
+    SimCommand(const RegisteredCommandBase* registeredCommandIn, const std::vector<std::string>& argumentsIn);
 
     bool execute() const;
 
