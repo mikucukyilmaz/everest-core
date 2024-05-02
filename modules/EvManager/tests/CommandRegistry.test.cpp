@@ -23,17 +23,16 @@ SCENARIO("Commands can be registered", "[RegisteredCommand]") {
             commandRegistry.registerCommand(commandName, argumentCount, testCommand0Function);
 
             THEN("The command can be retrieved") {
-                const auto* registeredCommand = commandRegistry.getRegisteredCommand(commandName);
-                REQUIRE(registeredCommand != nullptr);
+                const auto& registeredCommand = commandRegistry.getRegisteredCommand(commandName);
                 THEN("The command can be executed") {
-                    CHECK((*registeredCommand)({}) == true);
+                    CHECK(registeredCommand({}) == true);
                 }
                 THEN("The command throws when the number of arguments is invalid") {
-                    CHECK((*registeredCommand)({}) == true);
-                    CHECK_THROWS_WITH((*registeredCommand)({"arg1"}), "Invalid number of arguments for: testCommand0");
-                    CHECK_THROWS_WITH((*registeredCommand)({"arg1", "arg2"}),
+                    CHECK(registeredCommand({}) == true);
+                    CHECK_THROWS_WITH(registeredCommand({"arg1"}), "Invalid number of arguments for: testCommand0");
+                    CHECK_THROWS_WITH(registeredCommand({"arg1", "arg2"}),
                                       "Invalid number of arguments for: testCommand0");
-                    CHECK_THROWS_WITH((*registeredCommand)({"arg1", "arg2", "arg3"}),
+                    CHECK_THROWS_WITH(registeredCommand({"arg1", "arg2", "arg3"}),
                                       "Invalid number of arguments for: testCommand0");
                 }
             }
@@ -54,14 +53,13 @@ SCENARIO("Commands can be registered", "[RegisteredCommand]") {
             commandRegistry.registerCommand(commandName, argumentCount, testCommand1Function);
 
             THEN("The command can be retrieved") {
-                const auto* registeredCommand = commandRegistry.getRegisteredCommand(commandName);
-                REQUIRE(registeredCommand != nullptr);
+                const auto& registeredCommand = commandRegistry.getRegisteredCommand(commandName);
                 THEN("The command can be executed") {
-                    CHECK((*registeredCommand)({"arg1"}) == true);
+                    CHECK(registeredCommand({"arg1"}) == true);
                 }
                 THEN("The command throws when the number of arguments is invalid") {
-                    CHECK_THROWS_WITH((*registeredCommand)({}), "Invalid number of arguments for: testCommand1");
-                    CHECK_THROWS_WITH((*registeredCommand)({"arg1", "arg2"}),
+                    CHECK_THROWS_WITH(registeredCommand({}), "Invalid number of arguments for: testCommand1");
+                    CHECK_THROWS_WITH(registeredCommand({"arg1", "arg2"}),
                                       "Invalid number of arguments for: testCommand1");
                 }
             }
@@ -82,15 +80,14 @@ SCENARIO("Commands can be registered", "[RegisteredCommand]") {
             commandRegistry.registerCommand(commandName, argumentCount, testCommand2Function);
 
             THEN("The command can be retrieved") {
-                const auto* registeredCommand = commandRegistry.getRegisteredCommand(commandName);
-                REQUIRE(registeredCommand != nullptr);
+                const auto& registeredCommand = commandRegistry.getRegisteredCommand(commandName);
                 THEN("The command can be executed") {
-                    CHECK((*registeredCommand)({"arg1", "arg2"}) == true);
+                    CHECK(registeredCommand({"arg1", "arg2"}) == true);
                 }
                 THEN("The command throws when the number of arguments is invalid") {
-                    CHECK_THROWS_WITH((*registeredCommand)({}), "Invalid number of arguments for: testCommand2");
-                    CHECK_THROWS_WITH((*registeredCommand)({"arg1"}), "Invalid number of arguments for: testCommand2");
-                    CHECK_THROWS_WITH((*registeredCommand)({"arg1", "arg2", "arg3"}),
+                    CHECK_THROWS_WITH(registeredCommand({}), "Invalid number of arguments for: testCommand2");
+                    CHECK_THROWS_WITH(registeredCommand({"arg1"}), "Invalid number of arguments for: testCommand2");
+                    CHECK_THROWS_WITH(registeredCommand({"arg1", "arg2", "arg3"}),
                                       "Invalid number of arguments for: testCommand2");
                 }
             }

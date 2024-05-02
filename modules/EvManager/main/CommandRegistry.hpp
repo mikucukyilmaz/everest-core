@@ -32,10 +32,10 @@ public:
                                                                         std::forward<FunctionT>(function)));
     }
 
-    const RegisteredCommandBase* getRegisteredCommand(const std::string& commandName) const {
+    const RegisteredCommandBase& getRegisteredCommand(const std::string& commandName) const {
         try {
             const auto& registeredCommand = registeredCommands.at(commandName);
-            return registeredCommand.get();
+            return *registeredCommand.get();
         } catch (const std::out_of_range&) {
             throw std::invalid_argument{"Command not found: " + commandName};
         }

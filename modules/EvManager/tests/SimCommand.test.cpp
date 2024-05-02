@@ -25,7 +25,7 @@ SCENARIO("SimCommands can be created", "[SimCommand]") {
         commandRegistry.registerCommand(commandName, argumentCount, testCommandFunction);
 
         WHEN("The SimCommand is created") {
-            const auto simCommand = SimCommand{commandRegistry.getRegisteredCommand(commandName), {}};
+            const auto simCommand = SimCommand{&commandRegistry.getRegisteredCommand(commandName), {}};
 
             THEN("The command can be executed") {
                 CHECK(simCommand.execute() == true);
@@ -33,7 +33,7 @@ SCENARIO("SimCommands can be created", "[SimCommand]") {
         }
 
         WHEN("The SimCommand is created with the wrong number of arguments") {
-            const auto simCommand = SimCommand{commandRegistry.getRegisteredCommand(commandName), {"arg1"}};
+            const auto simCommand = SimCommand{&commandRegistry.getRegisteredCommand(commandName), {"arg1"}};
 
             THEN("The command throws") {
                 CHECK_THROWS_WITH(simCommand.execute(), "Invalid number of arguments for: testCommand");

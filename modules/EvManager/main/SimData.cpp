@@ -76,7 +76,7 @@ std::queue<SimCommand> SimData::compileCommands(CommandsWithArguments& commandsW
     auto compiledCommands = std::queue<SimCommand>{};
 
     for (auto& [command, arguments] : commandsWithArguments) {
-        compiledCommands.emplace(commandRegistry.getRegisteredCommand(command), arguments);
+        compiledCommands.emplace(&commandRegistry.getRegisteredCommand(command), arguments);
     }
 
     return compiledCommands;
