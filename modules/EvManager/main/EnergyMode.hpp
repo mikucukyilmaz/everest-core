@@ -5,6 +5,7 @@
 
 #include <string>
 #include <string_view>
+
 namespace module::main {
 
 class EnergyMode {

@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
 
-#include "SimData.hpp"
+#include "SimulationCommand.hpp"
 #include "CommandRegistry.hpp"
-#include "SimCommand.hpp"
-#include <algorithm>
 #include <queue>
-#include <sstream>
 #include <string>
-#include <utility>
 #include <vector>
-
 namespace module::main {
 
-std::queue<SimCommand> SimData::parseSimCommands(const std::string& value, const CommandRegistry& commandRegistry) {
+SimulationCommand::SimulationCommand(const RegisteredCommandBase* registeredCommandIn, const std::vector<std::string>& arguments) :
+    arguments{arguments}, registeredCommand{registeredCommandIn} {
+}
+
+bool SimulationCommand::execute() const {
+    return (*registeredCommand)(arguments);
+}
+
+std::queue<SimulationCommand> SimulationCommand::parseSimCommands(const std::string& value, const CommandRegistry& commandRegistry) {
     auto commandsVector{convertCommandsStringToVector(value)};
 
     auto commandsWithArguments{splitIntoCommandsWithArguments(commandsVector)};
@@ -21,7 +24,7 @@ std::queue<SimCommand> SimData::parseSimCommands(const std::string& value, const
     return compileCommands(commandsWithArguments, commandRegistry);
 }
 
-SimData::RawCommands SimData::convertCommandsStringToVector(const std::string& commandsView) {
+SimulationCommand::RawCommands SimulationCommand::convertCommandsStringToVector(const std::string& commandsView) {
 
     auto commands = std::string{commandsView};
 
@@ -42,7 +45,8 @@ SimData::RawCommands SimData::convertCommandsStringToVector(const std::string& c
     }
     return commandsVector;
 }
-SimData::CommandsWithArguments SimData::splitIntoCommandsWithArguments(std::vector<std::string>& commandsVector) {
+SimulationCommand::CommandsWithArguments
+SimulationCommand::splitIntoCommandsWithArguments(std::vector<std::string>& commandsVector) {
     auto commandsWithArguments = std::vector<std::pair<std::string, std::vector<std::string>>>{};
 
     for (auto& command : commandsVector) {
@@ -51,7 +55,7 @@ SimData::CommandsWithArguments SimData::splitIntoCommandsWithArguments(std::vect
     return commandsWithArguments;
 }
 
-SimData::CommandWithArguments SimData::splitIntoCommandWithArguments(std::string& command) {
+SimulationCommand::CommandWithArguments SimulationCommand::splitIntoCommandWithArguments(std::string& command) {
     // replace commas with spaces
     std::replace(command.begin(), command.end(), ',', ' ');
 
@@ -71,9 +75,9 @@ SimData::CommandWithArguments SimData::splitIntoCommandWithArguments(std::string
 
     return {commandName, arguments};
 }
-std::queue<SimCommand> SimData::compileCommands(CommandsWithArguments& commandsWithArguments,
+std::queue<SimulationCommand> SimulationCommand::compileCommands(CommandsWithArguments& commandsWithArguments,
                                                 const CommandRegistry& commandRegistry) {
-    auto compiledCommands = std::queue<SimCommand>{};
+    auto compiledCommands = std::queue<SimulationCommand>{};
 
     for (auto& [command, arguments] : commandsWithArguments) {
         compiledCommands.emplace(&commandRegistry.getRegisteredCommand(command), arguments);
@@ -81,4 +85,5 @@ std::queue<SimCommand> SimData::compileCommands(CommandsWithArguments& commandsW
 
     return compiledCommands;
 }
+
 } // namespace module::main

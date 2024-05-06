@@ -11,8 +11,8 @@ ev_setup_cpp_module()
 target_sources(${MODULE_NAME}
         PRIVATE
         "main/car_simulatorImpl.cpp"
-        "main/SimData.cpp"
-        "main/SimCommand.cpp"
+        "main/SimulationData.cpp"
+        "main/SimulationCommand.cpp"
         "main/EnergyMode.cpp"
 )
 # ev@bcc62523-e22b-41d7-ba2f-825b493a3c97:v1

@@ -15,20 +15,22 @@
 namespace module::main {
 
 class car_simulatorImpl;
+template <typename car_simulatorImplT> class CarSimulation;
 template <typename Func> class RegisteredCommand;
 
 class RegisteredCommandBase;
 
 class CommandRegistry {
 public:
-    CommandRegistry(car_simulatorImpl* const simulatorIn) : simulator{simulatorIn} {
+    CommandRegistry() {
     }
 
     // TODO(MarzellT): maybe we could deduce the argument count from the function signature somehow
     template <typename FunctionT>
-    void registerCommand(std::string commandName, size_t argumentCount, FunctionT&& function) {
+    void registerCommand(CarSimulation<car_simulatorImpl>* carSimulation, size_t argumentCount, FunctionT&& function,
+                         std::string commandName) {
         registeredCommands.try_emplace(
-            commandName, std::make_unique<RegisteredCommand<FunctionT>>(simulator, commandName, argumentCount,
+            commandName, std::make_unique<RegisteredCommand<FunctionT>>(carSimulation, commandName, argumentCount,
                                                                         std::forward<FunctionT>(function)));
     }
 
@@ -41,14 +43,9 @@ public:
         }
     }
 
-    car_simulatorImpl* getSimulator() const {
-        return simulator;
-    }
-
 private:
     using RegisteredCommands = std::unordered_map<std::string, std::unique_ptr<RegisteredCommandBase>>;
 
-    car_simulatorImpl* simulator{nullptr};
     RegisteredCommands registeredCommands;
 };
 
@@ -60,9 +57,9 @@ public:
 
 template <typename FunctionT> class RegisteredCommand : public RegisteredCommandBase {
 public:
-    RegisteredCommand(car_simulatorImpl* simulatorIn, std::string commandNameIn, std::size_t argumentCountIn,
+    RegisteredCommand(CarSimulation<car_simulatorImpl>* carSimulationIn, std::string commandNameIn, std::size_t argumentCountIn,
                       FunctionT functionIn) :
-        simulator{simulatorIn},
+        carSimulation{carSimulationIn},
         commandName{std::move(commandNameIn)},
         argumentCount{argumentCountIn},
         function{std::move(functionIn)} {
@@ -74,11 +71,11 @@ public:
         if (arguments.size() != argumentCount) {
             throw std::invalid_argument{"Invalid number of arguments for: " + commandName};
         }
-        return function(simulator, arguments);
+        return function(carSimulation, arguments);
     }
 
 private:
-    car_simulatorImpl* simulator;
+    CarSimulation<car_simulatorImpl>* carSimulation;
     std::string commandName;
     std::size_t argumentCount;
     FunctionT function;

@@ -9,13 +9,14 @@
 //
 
 #include <generated/interfaces/car_simulator/Implementation.hpp>
-#include <queue>
 
 #include "../EvManager.hpp"
-#include "SimData.hpp"
 
 // ev@75ac1216-19eb-4182-a85c-820f1fc2c091:v1
 // insert your custom include headers here
+#include "CarSimulation.hpp"
+#include "CommandRegistry.hpp"
+#include <queue>
 // ev@75ac1216-19eb-4182-a85c-820f1fc2c091:v1
 
 namespace module::main {
@@ -29,7 +30,8 @@ public:
         car_simulatorImplBase(ev, "main"), mod(mod), config(config){};
 
     // ev@8ea32d28-373f-4c90-ae5e-b4fcc74e2a61:v1
-    // insert your public definitions here
+    const size_t& getLoopIntervalMs() const;
+    const Everest::PtrContainer<EvManager>& getMod() const;
     // ev@8ea32d28-373f-4c90-ae5e-b4fcc74e2a61:v1
 
 protected:
@@ -56,24 +58,25 @@ private:
     void handleSimulationLoop();
     void runSimulationLoop();
     void registerAllCommands();
-    void carStateMachine();
     void subscribeToVariablesOnInit();
     void setupEVParameters();
     void callEVBoardSupportFunctions();
     void subscribeToExternalMQTT();
-    void resetSimDataToDefaults();
+    void resetCarSimulationDefaults();
     void updateCommandQueue(std::string& value);
 
     std::unique_ptr<CommandRegistry> commandRegistry;
 
-    std::mutex simDataMutex;
-    std::unique_ptr<SimData> simData;
+    std::mutex carSimulationMutex;
+    std::unique_ptr<CarSimulation<car_simulatorImpl>> carSimulation;
 
     bool enabled;
     std::atomic<bool> executionActive{false};
     size_t loopIntervalMs{};
 
     std::thread simulationThread;
+    std::queue<SimulationCommand> commandQueue;
+
     // ev@3370e4dd-95f4-47a9-aaec-ea76f34a66c9:v1
 };
 

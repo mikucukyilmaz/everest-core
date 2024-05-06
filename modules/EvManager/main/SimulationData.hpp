@@ -5,7 +5,7 @@
 
 #include "CommandRegistry.hpp"
 #include "EnergyMode.hpp"
-#include "SimCommand.hpp"
+#include "SimulationCommand.hpp"
 #include <generated/types/board_support_common.hpp>
 #include <optional>
 #include <queue>
@@ -27,7 +27,7 @@ enum class SimState {
     BCB_TOGGLE,
 };
 
-struct SimData {
+struct SimulationData {
     SimState state{SimState::UNPLUGGED};
     SimState lastState{SimState::UNPLUGGED};
     std::string slacState;
@@ -53,22 +53,6 @@ struct SimData {
     bool dc_power_on{false};
 
     types::board_support_common::Event actualBspEvent{};
-
-    std::queue<SimCommand> commandQueue;
-
-    static std::queue<SimCommand> parseSimCommands(const std::string& value, const CommandRegistry& registeredCommands);
-
-private:
-    using RawCommands = std::vector<std::string>;
-    using Arguments = std::vector<std::string>;
-    using CommandWithArguments = std::pair<std::string, Arguments>;
-    using CommandsWithArguments = std::vector<CommandWithArguments>;
-
-    static RawCommands convertCommandsStringToVector(const std::string& commands);
-    static CommandsWithArguments splitIntoCommandsWithArguments(std::vector<std::string>& commandsVector);
-    static CommandWithArguments splitIntoCommandWithArguments(std::string& command);
-    static std::queue<SimCommand> compileCommands(CommandsWithArguments& commandsWithArguments,
-                                                  const CommandRegistry& commandRegistry);
 };
 
 } // namespace module::main

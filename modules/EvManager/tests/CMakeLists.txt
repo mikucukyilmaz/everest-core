@@ -13,9 +13,8 @@ target_sources(${TEST_TARGET_NAME}
         PRIVATE
         CommandRegistry.test.cpp
         SimCommand.test.cpp
-        ../main/SimCommand.cpp
-        SimData.test.cpp
-        ../main/SimData.cpp
+        ../main/SimulationCommand.cpp
+        ../main/EnergyMode.cpp
 )
 
 target_compile_definitions(${TEST_TARGET_NAME} PRIVATE
