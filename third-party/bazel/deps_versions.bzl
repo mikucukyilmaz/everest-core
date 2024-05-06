@@ -50,7 +50,7 @@ EVEREST_DEPS = struct(
 
 	# libocpp
 	libocpp_repo = "https://github.com/EVerest/libocpp.git",
-	libocpp_tag = "v0.11.0",
+	libocpp_tag = "d3f696b",
 
 	# libslac
 	libslac_repo = "https://github.com/EVerest/libslac.git",
