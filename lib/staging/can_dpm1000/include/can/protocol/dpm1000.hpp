@@ -21,7 +21,7 @@ enum class ErrorType : uint8_t {
 
 enum class MessageType : uint8_t {
     SET_DATA_REQUEST = 0x00,
-    REQUEST_DATA_BYTE = 0x01,
+    REQUEST_DATA_BYTE = 0x10,
     RESPONSE_REQUEST = 0x41,
     SET_DATA = 0x03,
     RESPONSE_CONFIGURATION = 0x43,
