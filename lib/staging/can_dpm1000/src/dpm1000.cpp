@@ -35,10 +35,14 @@ void set_header(struct can_frame& frame, uint8_t source, uint8_t destination) {
 void power_on(struct can_frame& frame, bool switch_on, bool close_input_relay) {
     clear_frame_data(frame);
     frame.data[0] = to_underlying(def::MessageType::SET_DATA_REQUEST);
+    // frame.data[2] |= (((switch_on) ? 0 : 1) << def::SET_DATA_REQUEST_POWER_BIT_SHIFT);
+    // frame.data[2] |= (((close_input_relay) ? 0 : 1) << def::SET_DATA_REQUEST_INPUT_RELAY_BIT_SHIFT);
+    // frame.data[3] = 0x80; // FIXME (aw): literal
 
-    frame.data[2] |= (((switch_on) ? 0 : 1) << def::SET_DATA_REQUEST_POWER_BIT_SHIFT);
-    frame.data[2] |= (((close_input_relay) ? 0 : 1) << def::SET_DATA_REQUEST_INPUT_RELAY_BIT_SHIFT);
-    frame.data[3] = 0x80; // FIXME (aw): literal
+    // frame.data[2] |= (((switch_on) ? 0 : 1) << def::SET_DATA_REQUEST_POWER_BIT_SHIFT);
+    // frame.data[2] |= (((close_input_relay) ? 0 : 1) << def::SET_DATA_REQUEST_INPUT_RELAY_BIT_SHIFT);
+    frame.data[3] = 0x30; // FIXME (aw): literal
+    frame.data[5] = ((switch_on) ? 0 : 1);
     frame.can_dlc = sizeof(frame.data);
 }
 
