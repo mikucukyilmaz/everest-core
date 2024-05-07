@@ -4,7 +4,6 @@
 #pragma once
 
 #include <cstddef>
-#include <everest/logging.hpp>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -57,8 +56,8 @@ public:
 
 template <typename FunctionT> class RegisteredCommand : public RegisteredCommandBase {
 public:
-    RegisteredCommand(CarSimulation<car_simulatorImpl>* carSimulationIn, std::string commandNameIn, std::size_t argumentCountIn,
-                      FunctionT functionIn) :
+    RegisteredCommand(CarSimulation<car_simulatorImpl>* carSimulationIn, std::string commandNameIn,
+                      std::size_t argumentCountIn, FunctionT functionIn) :
         carSimulation{carSimulationIn},
         commandName{std::move(commandNameIn)},
         argumentCount{argumentCountIn},

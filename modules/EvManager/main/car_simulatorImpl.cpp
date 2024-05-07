@@ -95,7 +95,7 @@ void car_simulatorImpl::handle_modifyChargingSession(std::string& value) {
 
 void car_simulatorImpl::handleSimulationLoop() {
     while (enabled) {
-        if (carSimulation != nullptr && executionActive) {
+        if (executionActive) {
             runSimulationLoop();
             std::this_thread::sleep_for(std::chrono::milliseconds(loopIntervalMs));
         }
@@ -114,49 +114,40 @@ void car_simulatorImpl::handleSimulationLoop() {
 void car_simulatorImpl::registerAllCommands() {
     commandRegistry = std::make_unique<CommandRegistry>();
 
-    commandRegistry->registerCommand(carSimulation.get(), 1, carSimulation->sleep, "sleep");
-        commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iec_wait_pwr_ready,
-        "iec_wait_pwr_ready"); commandRegistry->registerCommand(carSimulation.get(), 0,
-        carSimulation->iso_wait_pwm_is_running,
-                                         "iso_wait_pwm_is_running");
-        commandRegistry->registerCommand(carSimulation.get(), 2, carSimulation->draw_power_regulated,
-                                         "draw_power_regulated");
-        commandRegistry->registerCommand(carSimulation.get(), 2, carSimulation->draw_power_fixed, "draw_power_fixed");
-        commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->pause, "pause");
-        commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->unplug, "unplug");
-        commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->error_e, "error_e");
-        commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->diode_fail, "diode_fail");
-        commandRegistry->registerCommand(carSimulation.get(), 1, carSimulation->rcd_current, "rcd_current");
-        commandRegistry->registerCommand(carSimulation.get(), 2, carSimulation->iso_draw_power_regulated,
-                                         "iso_draw_power_regulated");
-        commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->wait_for_real_plugin,
-                                         "wait_for_real_plugin");
+    commandRegistry->registerCommand(&carSimulation, 1, carSimulation.sleep, "sleep");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iec_wait_pwr_ready, "iec_wait_pwr_ready");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_wait_pwm_is_running,
+                                     "iso_wait_pwm_is_running");
+    commandRegistry->registerCommand(&carSimulation, 2, carSimulation.draw_power_regulated, "draw_power_regulated");
+    commandRegistry->registerCommand(&carSimulation, 2, carSimulation.draw_power_fixed, "draw_power_fixed");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.pause, "pause");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.unplug, "unplug");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.error_e, "error_e");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.diode_fail, "diode_fail");
+    commandRegistry->registerCommand(&carSimulation, 1, carSimulation.rcd_current, "rcd_current");
+    commandRegistry->registerCommand(&carSimulation, 2, carSimulation.iso_draw_power_regulated,
+                                     "iso_draw_power_regulated");
+    commandRegistry->registerCommand(&carSimulation, 0, carSimulation.wait_for_real_plugin, "wait_for_real_plugin");
 
-        if (!mod->r_slac.empty()) {
-            EVLOG_debug << "Slac undefined";
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_wait_slac_matched,
-                                             "iso_wait_slac_matched");
-        }
+    if (!mod->r_slac.empty()) {
+        EVLOG_debug << "Slac undefined";
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_wait_slac_matched,
+                                         "iso_wait_slac_matched");
+    }
 
-        if (!mod->r_ev.empty()) {
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_wait_pwr_ready,
-                                             "iso_wait_pwr_ready");
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_dc_power_on,
-            "iso_dc_power_on"); commandRegistry->registerCommand(carSimulation.get(), 1,
-            carSimulation->iso_start_v2g_session,
-                                             "iso_start_v2g_session");
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_stop_charging,
-            "iso_stop_charging"); commandRegistry->registerCommand(carSimulation.get(), 1,
-            carSimulation->iso_wait_for_stop, "iso_wait_for_stop");
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_wait_v2g_session_stopped,
-                                             "iso_wait_v2g_session_stopped");
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_pause_charging,
-                                             "iso_pause_charging");
-            commandRegistry->registerCommand(carSimulation.get(), 0, carSimulation->iso_wait_for_resume,
-                                             "iso_wait_for_resume");
-            commandRegistry->registerCommand(carSimulation.get(), 1, carSimulation->iso_start_bcb_toggle,
-                                             "iso_start_bcb_toggle");
-        }
+    if (!mod->r_ev.empty()) {
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_wait_pwr_ready, "iso_wait_pwr_ready");
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_dc_power_on, "iso_dc_power_on");
+        commandRegistry->registerCommand(&carSimulation, 1, carSimulation.iso_start_v2g_session,
+                                         "iso_start_v2g_session");
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_stop_charging, "iso_stop_charging");
+        commandRegistry->registerCommand(&carSimulation, 1, carSimulation.iso_wait_for_stop, "iso_wait_for_stop");
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_wait_v2g_session_stopped,
+                                         "iso_wait_v2g_session_stopped");
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_pause_charging, "iso_pause_charging");
+        commandRegistry->registerCommand(&carSimulation, 0, carSimulation.iso_wait_for_resume, "iso_wait_for_resume");
+        commandRegistry->registerCommand(&carSimulation, 1, carSimulation.iso_start_bcb_toggle, "iso_start_bcb_toggle");
+    }
 }
 
 void car_simulatorImpl::runSimulationLoop() {
@@ -180,7 +171,7 @@ void car_simulatorImpl::runSimulationLoop() {
         }
     }
 
-    carSimulation->stateMachine();
+    carSimulation.stateMachine();
 }
 
 bool car_simulatorImpl::checkCanExecute() {
@@ -201,9 +192,9 @@ void car_simulatorImpl::subscribeToVariablesOnInit() {
     std::lock_guard<std::mutex> lock{carSimulationMutex};
     using types::board_support_common::BspEvent;
     mod->r_ev_board_support->subscribe_bsp_event([this](const auto& bsp_event) {
-        carSimulation->setBspEvent(bsp_event.event);
+        carSimulation.setBspEvent(bsp_event.event);
         if (bsp_event.event == types::board_support_common::Event::Disconnected &&
-            carSimulation->getState() == main::SimState::UNPLUGGED) {
+            carSimulation.getState() == main::SimState::UNPLUGGED) {
             executionActive = false;
         }
     });
@@ -211,25 +202,27 @@ void car_simulatorImpl::subscribeToVariablesOnInit() {
     // subscribe bsp_measurement
     using types::board_support_common::BspMeasurement;
     mod->r_ev_board_support->subscribe_bsp_measurement([this](const auto& measurement) {
-        carSimulation->setPp(measurement.proximity_pilot.ampacity);
-        carSimulation->setRcdCurrent(measurement.rcd_current_mA.value());
-        carSimulation->setPwmDutyCycle(measurement.cp_pwm_duty_cycle);
+        carSimulation.setPp(measurement.proximity_pilot.ampacity);
+        carSimulation.setRcdCurrent(measurement.rcd_current_mA.value());
+        carSimulation.setPwmDutyCycle(measurement.cp_pwm_duty_cycle);
     });
 
     // subscribe slac_state
     if (!mod->r_slac.empty()) {
         const auto& slac = mod->r_slac.at(0);
-        slac->subscribe_state([this](const auto& state) { carSimulation->setSlacState(state); });
+        slac->subscribe_state([this](const auto& state) {
+            carSimulation.setSlacState(state);
+        });
     }
 
     // subscribe ev events
     if (!mod->r_ev.empty()) {
         const auto& _ev = mod->r_ev.at(0);
-        _ev->subscribe_AC_EVPowerReady([this](auto value) { carSimulation->setIsoPwrReady(value); });
-        _ev->subscribe_AC_EVSEMaxCurrent([this](auto value) { carSimulation->setEVSEMaxCurrent(value); });
-        _ev->subscribe_AC_StopFromCharger([this]() { carSimulation->setIsoStopped(true); });
-        _ev->subscribe_V2G_Session_Finished([this]() { carSimulation->setV2gFinished(true); });
-        _ev->subscribe_DC_PowerOn([this]() { carSimulation->setDcPowerOn(true); });
+        _ev->subscribe_AC_EVPowerReady([this](auto value) { carSimulation.setIsoPwrReady(value); });
+        _ev->subscribe_AC_EVSEMaxCurrent([this](auto value) { carSimulation.setEVSEMaxCurrent(value); });
+        _ev->subscribe_AC_StopFromCharger([this]() { carSimulation.setIsoStopped(true); });
+        _ev->subscribe_V2G_Session_Finished([this]() { carSimulation.setV2gFinished(true); });
+        _ev->subscribe_DC_PowerOn([this]() { carSimulation.setDcPowerOn(true); });
     }
 }
 
@@ -281,7 +274,7 @@ void car_simulatorImpl::subscribeToExternalMQTT() {
 }
 void car_simulatorImpl::resetCarSimulationDefaults() {
     std::lock_guard<std::mutex> lock{carSimulationMutex};
-    carSimulation = std::make_unique<CarSimulation<car_simulatorImpl>>(this);
+    carSimulation.reset();
 }
 
 void car_simulatorImpl::updateCommandQueue(std::string& value) {

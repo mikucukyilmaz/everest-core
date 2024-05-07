@@ -68,7 +68,7 @@ private:
     std::unique_ptr<CommandRegistry> commandRegistry;
 
     std::mutex carSimulationMutex;
-    std::unique_ptr<CarSimulation<car_simulatorImpl>> carSimulation;
+    CarSimulation<car_simulatorImpl> carSimulation{this};
 
     bool enabled;
     std::atomic<bool> executionActive{false};

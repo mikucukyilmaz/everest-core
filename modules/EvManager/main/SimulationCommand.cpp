@@ -3,7 +3,9 @@
 
 #include "SimulationCommand.hpp"
 #include "CommandRegistry.hpp"
+#include <algorithm>
 #include <queue>
+#include <sstream>
 #include <string>
 #include <vector>
 namespace module::main {

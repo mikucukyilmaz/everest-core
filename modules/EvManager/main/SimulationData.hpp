@@ -30,7 +30,7 @@ enum class SimState {
 struct SimulationData {
     SimState state{SimState::UNPLUGGED};
     SimState lastState{SimState::UNPLUGGED};
-    std::string slacState;
+    std::string slacState{"UNMATCHED"};
     std::optional<size_t> sleepTicksLeft{};
 
     bool v2g_finished{false};

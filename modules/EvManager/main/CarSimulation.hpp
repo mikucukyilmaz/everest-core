@@ -8,12 +8,17 @@
 #include "SimulationCommand.hpp"
 #include "SimulationData.hpp"
 #include "generated/types/ev_board_support.hpp"
+#include <everest/logging.hpp>
 
 namespace module::main {
 
 template <typename car_simulatorImplT> class CarSimulation {
 public:
     CarSimulation(car_simulatorImplT* simulatorIn) : simulator{simulatorIn}, simData{} {};
+
+    void reset() {
+        simData = SimulationData{};
+    }
 
     const SimState& getState() const {
         return simData.state;
